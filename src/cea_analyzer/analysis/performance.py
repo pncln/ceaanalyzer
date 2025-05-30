@@ -14,8 +14,8 @@ import numpy as np
 import pandas as pd
 from matplotlib.figure import Figure
 
-from config import G0
-from util import ambient_pressure
+from ..core.config import G0
+from ..utils.utilities import ambient_pressure
 
 # Universal gas constant
 R_UNIVERSAL = 8.31446261815324  # J/(mol·K)
@@ -136,7 +136,32 @@ def compute_system(df: pd.DataFrame,
         burn_time = propellant_mass / mdot
         delta_v = isp_s * G0 * np.log(initial_mass / (initial_mass - propellant_mass))
 
-        # 10) Compile results
+        # 10) Calculate nozzle performance parameters
+        # Ideal thrust coefficient
+        ideal_cf = np.sqrt((2 * gamma**2) / (gamma - 1) * 
+                        (2 / (gamma + 1))**((gamma + 1) / (gamma - 1)) * 
+                        (1 - (1 / area_ratio)**((gamma - 1) / gamma)))
+        
+        # Divergence loss factor (simplified estimate based on cone half-angle)
+        divergence_angle_deg = 15.0  # Default conical nozzle half-angle
+        divergence_loss_factor = 0.5 * (1 + np.cos(np.radians(divergence_angle_deg)))
+        
+        # Actual thrust coefficient
+        thrust_coefficient = ideal_cf * divergence_loss_factor
+        
+        # Exit Mach number (estimated)
+        exit_mach_number = 2.2  # Typical value for rockets, would be calculated more precisely
+        if area_ratio > 4:
+            exit_mach_number = 2.5 + 0.5 * np.log(area_ratio / 4.0)
+        
+        # Nozzle length to throat diameter ratio (simplified formula)
+        length_to_throat_ratio = 0.5 * (np.sqrt(area_ratio) - 1) / np.tan(np.radians(divergence_angle_deg))
+        
+        # Nozzle surface area (simplified conical approximation)
+        nozzle_length = length_to_throat_ratio * d_t
+        surface_area = np.pi * (d_t + d_e) * np.sqrt((d_e - d_t)**2 / 4 + nozzle_length**2) / 2
+        
+        # 11) Compile results
         results = {
             "best": best,
             "At": at,
@@ -148,7 +173,17 @@ def compute_system(df: pd.DataFrame,
             "Isps": isp_values,
             "mdot": mdot,
             "dv": delta_v,
-            "tb": burn_time
+            "tb": burn_time,
+            # Add nozzle performance parameters
+            "area_ratio": area_ratio,
+            "thrust_coefficient": thrust_coefficient,
+            "ideal_thrust_coefficient": ideal_cf,
+            "divergence_loss_factor": divergence_loss_factor,
+            "divergence_angle_deg": divergence_angle_deg,
+            "nozzle_efficiency": divergence_loss_factor,  # Simplified, same as divergence loss in this model
+            "length_to_throat_ratio": length_to_throat_ratio,
+            "surface_area": surface_area,
+            "exit_mach_number": exit_mach_number
         }
         
         return results
@@ -216,21 +251,38 @@ def create_altitude_performance_plot(results: Dict[str, Any]) -> Figure:
     Figure
         Matplotlib Figure with the altitude performance plot
     """
-    import matplotlib.pyplot as plt
+    from matplotlib.figure import Figure
     
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 8), sharex=True)
+    # Create figure and axes
+    fig = Figure(figsize=(10, 6))
+    ax1 = fig.add_subplot(111)
+    ax2 = ax1.twinx()
     
-    # Plot thrust vs altitude
-    ax1.plot(results['alts'] / 1000, np.array(results['Fs']) / 1000, 'b-', linewidth=2)
-    ax1.set_ylabel('Thrust (kN)')
-    ax1.set_title('Rocket Performance vs Altitude')
-    ax1.grid(True, linestyle='--', alpha=0.7)
+    # Extract data
+    altitudes = results["alts"]
+    thrusts = results["Fs"]
+    isps = results["Isps"]
     
-    # Plot Isp vs altitude
-    ax2.plot(results['alts'] / 1000, results['Isps'], 'r-', linewidth=2)
-    ax2.set_xlabel('Altitude (km)')
-    ax2.set_ylabel('Specific Impulse (s)')
-    ax2.grid(True, linestyle='--', alpha=0.7)
+    # Plot data
+    ax1.plot(altitudes, thrusts, 'b-', linewidth=2, label='Thrust')
+    ax2.plot(altitudes, isps, 'r-', linewidth=2, label='Isp')
+    
+    # Set labels and title
+    ax1.set_xlabel('Altitude (m)')
+    ax1.set_ylabel('Thrust (N)', color='b')
+    ax2.set_ylabel('Specific Impulse (s)', color='r')
+    fig.suptitle('Rocket Performance vs. Altitude')
+    
+    # Set tick colors
+    ax1.tick_params(axis='y', labelcolor='b')
+    ax2.tick_params(axis='y', labelcolor='r')
+    
+    # Add legends and grid
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc='best')
+    ax1.grid(True)
     
     fig.tight_layout()
+    
     return fig

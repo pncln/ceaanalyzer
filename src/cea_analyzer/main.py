@@ -11,11 +11,11 @@ import sys
 import argparse
 from pathlib import Path
 
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QMessageBox
 
-from gui import MainWindow
-from __init__ import __version__
-from logger import configure_logging, get_logger
+from .app import CEAAnalyzerApp
+from . import __version__
+from .utils.logger import setup_logger
 
 
 def parse_arguments():
@@ -54,34 +54,35 @@ def main():
     # Parse command-line arguments
     args = parse_arguments()
     
-    # Configure logging based on arguments
+    # Set up logging
     log_level = "DEBUG" if args.debug else "INFO"
-    configure_logging(log_level=log_level, log_file=args.log_file)
-    
-    # Get logger for main module
-    logger = get_logger("main")
+    logger = setup_logger("cea_analyzer", level=log_level, log_file=args.log_file)
     logger.info(f"Starting CEA Analyzer v{__version__}")
     
-    # Create Qt application
-    app = QApplication(sys.argv)
-    app.setApplicationName("CEA Analyzer")
-    app.setApplicationVersion(__version__)
-    
-    # Set application style
-    app.setStyle("Fusion")
-    
-    # Create and show main window
-    win = MainWindow()
-    win.show()
-    
-    # If a file path was provided, open it
-    if args.file:
-        file_path = args.file
-        logger.info(f"Opening file from command line: {file_path}")
-        win.open_file(file_path)
-    
-    # Start event loop
-    return sys.exit(app.exec_())
+    try:
+        # Create and run the application
+        analyzer_app = CEAAnalyzerApp()
+        
+        # If a file path was provided, open it after app initialization
+        if args.file:
+            file_path = Path(args.file)
+            if file_path.exists():
+                logger.info(f"Opening file from command line: {file_path}")
+                # Use QTimer to load the file after the main window is shown
+                from PyQt5.QtCore import QTimer
+                QTimer.singleShot(500, lambda: analyzer_app.main_window.open_file(str(file_path)))
+            else:
+                logger.warning(f"File not found: {file_path}")
+                QMessageBox.warning(None, "File Not Found", f"The specified file was not found: {file_path}")
+        
+        # Run the application
+        return analyzer_app.run()
+        
+    except Exception as e:
+        logger.error(f"Error starting application: {str(e)}")
+        QMessageBox.critical(None, "Application Error", 
+                          f"An error occurred while starting the application:\n{str(e)}")
+        return 1
 
 
 if __name__ == "__main__":

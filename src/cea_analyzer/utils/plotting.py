@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from matplotlib.figure import Figure
 from matplotlib import rcParams
-from config import CONFIG
+from ..core.config import CONFIG
 
 
 # Set default figure style for consistent appearance

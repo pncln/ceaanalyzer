@@ -1,10 +1,14 @@
 """
-CEA Analyzer - A modern tool for analyzing rocket propulsion systems
-------------------------------------------------------------------
+RocketMotor - Professional Rocket Motor Design Software
+------------------------------------------------------
 
-This package provides tools for analyzing NASA-CEA output files and
-designing optimized rocket nozzle contours.
+A comprehensive tool for designing, analyzing, and optimizing 
+solid and liquid rocket motors with integrated thermochemical analysis,
+grain design, structural analysis, and performance prediction.
+
+Built on NASA-CEA thermochemical analysis with expanded capabilities
+for complete motor design workflows.
 """
 
-__version__ = '1.0.0'
-__author__ = 'CEA Analyzer Team'
+__version__ = '2.0.0'
+__author__ = 'RocketMotor Development Team'

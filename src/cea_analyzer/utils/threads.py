@@ -13,7 +13,7 @@ from pathlib import Path
 
 from PyQt5.QtCore import QThread, pyqtSignal
 import pandas as pd
-from parser import parse_cea_output
+from ..analysis.cea_parser import parse_cea_output
 
 
 class ParserThread(QThread):

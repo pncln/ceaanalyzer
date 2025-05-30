@@ -9,12 +9,13 @@ with Applications (CEA) output files into structured data for analysis.
 
 import re
 import logging
+import numpy as np
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Callable, Union
 
 import pandas as pd
 
-from config import G0
+from ..core.config import G0
 
 
 def parse_cea_output(path: Union[str, Path], progress_cb: Optional[Callable[[int], None]] = None) -> pd.DataFrame:
@@ -95,6 +96,63 @@ def parse_cea_output(path: Union[str, Path], progress_cb: Optional[Callable[[int
     df.reset_index(drop=True, inplace=True)
 
     return df
+
+
+def extract_thermo_data(df: pd.DataFrame) -> Dict[str, Any]:
+    """
+    Extract key thermodynamic data from a CEA results DataFrame.
+    
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame with CEA results, as returned by parse_cea_output
+        
+    Returns
+    -------
+    Dict[str, Any]
+        Dictionary containing thermodynamic properties:
+        - gamma: Specific heat ratio (cp/cv)
+        - molecular_weight: Average molecular weight
+        - c_star: Characteristic velocity
+        - area_ratio: Optimum expansion ratio
+        - cf: Thrust coefficient
+    """
+    if df.empty:
+        return {}
+    
+    # Find row with maximum Isp - typically the optimal O/F ratio
+    max_isp_row = df.loc[df['Isp (s)'].idxmax()]
+    
+    # Extract key data
+    thermo_data = {
+        'gamma': 1.2,  # Default value if not available
+        'molecular_weight': 20.0,  # Default value if not available
+        'c_star': max_isp_row.get('Isp (m/s)', 0) / 1.4,  # Approximate from Isp
+        'area_ratio': max_isp_row.get('Expansion Ratio', 8.0),
+        'cf': 1.4,  # Default value if not available
+        'chamber_pressure': max_isp_row.get('Pc (bar)', 0) * 1e5,  # Convert to Pa
+        'optimal_of_ratio': max_isp_row.get('O/F', 0)
+    }
+    
+    # Compute gamma if chamber and throat temperatures are available
+    if 'T_chamber (K)' in max_isp_row and 'T_throat (K)' in max_isp_row and 'Pressure Ratio' in max_isp_row:
+        T_chamber = max_isp_row['T_chamber (K)']
+        T_throat = max_isp_row['T_throat (K)']
+        P_ratio = max_isp_row['Pressure Ratio']
+        
+        # Gamma can be estimated from: T_throat/T_chamber = (P_throat/P_chamber)^((gamma-1)/gamma)
+        # Solving for gamma: gamma = 1 / (1 - ln(T_throat/T_chamber) / ln(P_ratio))
+        try:
+            if T_throat > 0 and T_chamber > 0 and P_ratio > 0:
+                gamma = 1.0 / (1.0 - (np.log(T_throat/T_chamber) / np.log(P_ratio)))
+                # Validate reasonable value
+                if 1.1 <= gamma <= 1.7:
+                    thermo_data['gamma'] = gamma
+        except Exception:
+            # Keep default value if calculation fails
+            pass
+    
+    return thermo_data
 
 
 def _parse_case_block(block: str) -> Optional[Dict[str, float]]:

@@ -199,14 +199,3 @@ class PandasModel(QAbstractTableModel):
         """
         flags = super().flags(index)
         return flags  # By default, items are enabled and selectable but not editable
-        
-    def get_dataframe(self) -> pd.DataFrame:
-        """
-        Get the internal DataFrame.
-        
-        Returns
-        -------
-        pd.DataFrame
-            Copy of the internal DataFrame
-        """
-        return self._df.copy()

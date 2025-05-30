@@ -10,15 +10,15 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QTableView, QTabWidget, Q
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QFont
 
-from parser import parse_cea_output
-from models import PandasModel
-from threads import ParserThread
-from plots import create_graphs
-from analysis import compute_system
-from exporter import export_csv, export_excel, export_pdf
-from config import CONFIG, CONFIG_PATH
-import nozzle
-from moc import generate_moc_contour
+from .analysis.cea_parser import parse_cea_output
+from .core.models import PandasModel
+from .utils.threads import ParserThread
+from .utils.plots import create_graphs
+from .analysis import compute_system
+from .utils.export import export_csv, export_excel, export_pdf
+from .core.config import CONFIG, CONFIG_PATH
+from .propulsion import nozzle
+# MOC import removed
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -114,32 +114,7 @@ class MainWindow(QMainWindow):
         
         self.tabs.addTab(self.nozzle_widget, "Nozzle Design")
 
-        # ─── MOC (Method of Characteristics) ───
-
-        self.moc_canvas = FigureCanvas(Figure(tight_layout=True))
-        self.moc_text   = QTextEdit()
-        self.moc_text.setReadOnly(True)
-
-        # Force the canvas to expand both horizontally & vertically,
-        # and the text box to expand only horizontally.
-        self.moc_canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.moc_text.setSizePolicy(  QSizePolicy.Expanding, QSizePolicy.Fixed)
-
-        # Container for the MOC tab
-        moc_widget = QWidget()
-        moc_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-
-        moc_layout = QVBoxLayout()
-        moc_layout.setContentsMargins(0, 0, 0, 0)
-        moc_layout.setSpacing(0)
-
-        # Stretch=1 gives all extra space to the canvas; stretch=0 leaves
-        # the text box at its preferred height.
-        moc_layout.addWidget(self.moc_canvas, 1)
-        moc_layout.addWidget(self.moc_text,   0)
-
-        moc_widget.setLayout(moc_layout)
-        self.tabs.addTab(moc_widget, "MOC")
+        # MOC tab has been removed
 
         # Filters dock
         dock = QDockWidget("Filters", self)
@@ -210,7 +185,7 @@ class MainWindow(QMainWindow):
         self.update_summary()
         # self.update_optimization()
         self.update_system()
-        self.update_moc()
+        # MOC functionality removed
         self.update_recommendations()
         self.update_nozzle_design()
 
@@ -221,11 +196,13 @@ class MainWindow(QMainWindow):
         # build brand‐new figures
         new_figs = create_graphs(self.df)
         for name, new_fig in new_figs.items():
-            canvas = self.canvases[name]
-            # swap out the old Figure for the new one
-            canvas.figure = new_fig
-            canvas.draw()
-            self.figures[name] = new_fig
+            # Only update canvases that exist
+            if name in self.canvases:
+                canvas = self.canvases[name]
+                # swap out the old Figure for the new one
+                canvas.figure = new_fig
+                canvas.draw()
+                self.figures[name] = new_fig
 
     def update_summary(self):
         best = self.df.loc[self.df["Isp (s)"].idxmax()]
@@ -240,67 +217,7 @@ class MainWindow(QMainWindow):
         # Display a message that optimization feature has been removed
         self.opt_text.setHtml("<h2>Optimization</h2><p>Optimization heatmaps feature has been removed.</p>")
 
-    def update_moc(self):
-        """
-        Compute and plot the MOC nozzle wall from the ‘best’ case in self.df.
-        """
-        # 1) Find the best‐Isp row
-        best = self.df.loc[self.df["Isp (s)"].idxmax()]
-
-        # 2) Recompute system quantities (so we get At and Ae from compute_system)
-        from analysis import compute_system
-        res = compute_system(self.df)
-        At = res["At"]       # throat area [m²]
-        Ae = res["Ae"]       # exit  area [m²]
-
-        # 3) Expansion ratio and throat radius
-        area_ratio = Ae / At
-        R_throat   = (At / np.pi) ** 0.5
-
-        # 4) Generate the MOC contour (using your moc.py routine)
-        from moc import generate_moc_contour
-        gamma = 1.2    # or pull from config if you make it dynamic
-        N     = 30     # number of characteristic lines
-        x_wall, r_wall = generate_moc_contour(
-            area_ratio=area_ratio,
-            gamma=gamma,
-            N=N,
-            R_throat=R_throat
-        )
-
-        # 5) Clear & redraw the figure
-        fig = self.moc_canvas.figure
-        fig.clear()
-        ax = fig.add_subplot(111)
-
-        ax.plot(x_wall,  r_wall, lw=2, label="Upper contour")
-        ax.plot(x_wall, -r_wall, lw=2, label="Lower contour")
-
-        # 6) Autoscale + padding so lines never butt the edges
-        ax.relim()
-        ax.autoscale_view()
-        ax.margins(x=0, y=0.05)
-
-        ax.set_title("MOC Nozzle Contour")
-        ax.set_xlabel("Axial (m)")
-        ax.set_ylabel("Radius (m)")
-        ax.legend(loc="best", frameon=False)
-
-        # 7) Kill widget padding so the plot fills horizontally
-        fig.tight_layout(pad=0)
-
-        # 8) Render
-        self.moc_canvas.draw()
-
-        # 9) Update the explanatory text with the actual parameters
-        self.moc_text.setHtml(
-            "<h2>Method of Characteristics</h2>"
-            "<p>Best case parameters:<br>"
-            f"O/F = <b>{best['O/F']:.2f}</b>, "
-            f"Pc = <b>{best['Pc (bar)']} bar</b><br>"
-            f"Throat radius = <b>{R_throat:.3f} m</b><br>"
-            f"Expansion ratio (Aₑ/A*) = <b>{area_ratio:.2f}</b></p>"
-        )
+    # update_moc method has been removed
 
     def update_system(self):
         """

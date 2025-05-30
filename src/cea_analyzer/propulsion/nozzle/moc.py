@@ -1,3 +1,11 @@
+"""
+Method of Characteristics (MOC) Module
+------------------------------------
+
+This module implements the Method of Characteristics (MOC) for
+designing supersonic nozzle contours.
+"""
+
 import numpy as np
 from scipy.optimize import fsolve
 
@@ -6,6 +14,18 @@ def prandtl_meyer(M, gamma):
     Compute the Prandtl–Meyer function ν(M) [radians].
     ν(M) = sqrt((γ+1)/(γ−1)) * arctan( sqrt((γ−1)/(γ+1)*(M^2−1)) )
            − arctan( sqrt(M^2 −1) )
+    
+    Parameters
+    ----------
+    M : float
+        Mach number (M > 1)
+    gamma : float
+        Specific heat ratio
+        
+    Returns
+    -------
+    float
+        Prandtl-Meyer angle in radians
     """
     term1 = np.sqrt((gamma+1)/(gamma-1))
     nu = term1 * np.arctan(np.sqrt((gamma-1)/(gamma+1)*(M**2 - 1))) \
@@ -15,6 +35,18 @@ def prandtl_meyer(M, gamma):
 def inverse_prandtl_meyer(nu_target, gamma):
     """
     Invert ν(M) = nu_target → M via a root-finder.
+    
+    Parameters
+    ----------
+    nu_target : float
+        Target Prandtl-Meyer angle in radians
+    gamma : float
+        Specific heat ratio
+        
+    Returns
+    -------
+    float
+        Mach number corresponding to the given Prandtl-Meyer angle
     """
     fn = lambda M: prandtl_meyer(M, gamma) - nu_target
     # initial guess: if nu small, M≈1. else M≈2
@@ -26,6 +58,18 @@ def mach_from_area_ratio(AR, gamma):
     """
     Solve A/A* = AR for supersonic Mach M > 1:
     A/A* = (1/M)*[ (2/(γ+1))*(1 + (γ−1)/2*M^2 ) ]^[(γ+1)/(2(γ−1)) ]
+    
+    Parameters
+    ----------
+    AR : float
+        Area ratio (A/A*)
+    gamma : float
+        Specific heat ratio
+        
+    Returns
+    -------
+    float
+        Mach number corresponding to the given area ratio
     """
     def area_eq(M):
         left = (1.0/M) * ( (2.0/(gamma+1))*(1.0 + 0.5*(gamma-1)*M**2) )**((gamma+1)/(2*(gamma-1)))
@@ -45,7 +89,7 @@ def generate_moc_contour(area_ratio, gamma, N=25, R_throat=1.0):
     gamma : float
         Specific‐heat ratio of the gas.
     N : int
-        Number of characteristic “fan” lines (including the throat and exit).
+        Number of characteristic "fan" lines (including the throat and exit).
     R_throat : float
         Physical throat radius (meters or any length unit).
 
@@ -92,10 +136,3 @@ def generate_moc_contour(area_ratio, gamma, N=25, R_throat=1.0):
         r_wall[i] = r_wall[i-1] + ds * np.sin(theta[i])
 
     return x_wall, r_wall
-
-# Example usage:
-if __name__ == "__main__":
-    # Design for A_e/A* = 8, gamma=1.2, 20 lines, throat radius 0.1 m
-    x, r = generate_moc_contour(area_ratio=8.0, gamma=1.2, N=20, R_throat=0.1)
-    for xi, ri in zip(x, r):
-        print(f"{xi:.4f}, {ri:.4f}")

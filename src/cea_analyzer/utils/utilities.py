@@ -184,3 +184,38 @@ def pressure_ratio_from_mach(mach: float, gamma: float = 1.4) -> float:
         Pressure ratio (p/p0)
     """
     return (1.0 + 0.5 * (gamma - 1.0) * mach**2) ** (-gamma / (gamma - 1.0))
+
+
+def atmospheric_properties(altitude: float) -> Tuple[float, float, float]:
+    """
+    Calculate atmospheric properties at a given altitude.
+    
+    Parameters
+    ----------
+    altitude : float
+        Altitude in meters above mean sea level
+        
+    Returns
+    -------
+    Tuple[float, float, float]
+        Tuple containing (pressure [Pa], temperature [K], density [kg/m³])
+        
+    Notes
+    -----
+    Uses the International Standard Atmosphere (ISA) model.
+    """
+    # Calculate pressure using ambient_pressure function
+    pressure = ambient_pressure(altitude)
+    
+    # Calculate temperature using ISA model
+    if altitude <= ISA_TROPOPAUSE_ALTITUDE:
+        # Troposphere - temperature decreases linearly with altitude
+        temperature = ISA_TEMPERATURE_SEA_LEVEL - ISA_LAPSE_RATE_TROPOSPHERE * altitude
+    else:
+        # Stratosphere - constant temperature
+        temperature = ISA_TROPOPAUSE_TEMPERATURE
+    
+    # Calculate density using ideal gas law: ρ = p / (R * T)
+    density = pressure / (ISA_GAS_CONSTANT * temperature)
+    
+    return pressure, temperature, density
