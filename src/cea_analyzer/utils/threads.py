@@ -11,7 +11,7 @@ import logging
 from typing import Optional, Any
 from pathlib import Path
 
-from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import QThread, pyqtSignal
 import pandas as pd
 from ..analysis.cea_parser import parse_cea_output
 

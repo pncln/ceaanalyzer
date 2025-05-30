@@ -2,13 +2,16 @@ import sys
 import pandas as pd
 import numpy as np
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from PyQt5.QtWidgets import QApplication, QMainWindow, QTableView, QTabWidget, QWidget, \
+import matplotlib
+# Set the backend to qtagg which works with PyQt6
+matplotlib.use('qtagg')
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from PyQt6.QtWidgets import QApplication, QMainWindow, QTableView, QTabWidget, QWidget, \
     QVBoxLayout, QTextEdit, QDockWidget, QFormLayout, QLineEdit, QPushButton, \
-    QStatusBar, QProgressBar, QFileDialog, QSizePolicy, QComboBox, QAction, \
+    QStatusBar, QProgressBar, QFileDialog, QSizePolicy, QComboBox, \
     QHBoxLayout, QLabel, QGroupBox, QRadioButton, QButtonGroup, QCheckBox, QGridLayout
-from PyQt5.QtCore import Qt, QThread, pyqtSignal
-from PyQt5.QtGui import QFont
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtGui import QFont, QAction
 
 from .analysis.cea_parser import parse_cea_output
 from .core.models import PandasModel
@@ -127,7 +130,7 @@ class MainWindow(QMainWindow):
         btnA = QPushButton("Apply"); btnR = QPushButton("Reset")
         btnA.clicked.connect(self.apply_filters); btnR.clicked.connect(self.reset_filters)
         fl.addRow(btnA, btnR)
-        dock.setWidget(fw); self.addDockWidget(Qt.LeftDockWidgetArea, dock)
+        dock.setWidget(fw); self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, dock)
 
         # Status bar
         self.status = QStatusBar(); self.setStatusBar(self.status)

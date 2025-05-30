@@ -8,16 +8,16 @@ Widget for designing and analyzing rocket motors with various grain configuratio
 import numpy as np
 from typing import Dict, List, Optional, Tuple, Any
 
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QLabel, 
     QComboBox, QLineEdit, QDoubleSpinBox, QCheckBox, QPushButton,
     QFileDialog, QTabWidget, QSplitter, QMessageBox, QRadioButton,
     QButtonGroup, QGridLayout, QSpacerItem, QSizePolicy, QFormLayout
 )
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 
 from ...propulsion.motor.design import MotorDesign
 from ...propulsion.motor.types import MotorType
@@ -52,7 +52,7 @@ class MotorDesignWidget(QWidget):
         main_layout.setContentsMargins(6, 6, 6, 6)
         
         # Create a splitter for the main panels
-        self.splitter = QSplitter(Qt.Vertical)
+        self.splitter = QSplitter(Qt.Orientation.Vertical)
         
         # Top panel: Design controls
         top_panel = QWidget()
@@ -277,7 +277,7 @@ class MotorDesignWidget(QWidget):
         summary_layout = QVBoxLayout(summary_tab)
         
         self.summary_text = QLabel("No motor design available.")
-        self.summary_text.setAlignment(Qt.AlignCenter)
+        self.summary_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.summary_text.setWordWrap(True)
         self.summary_text.setStyleSheet("font-family: monospace;")
         

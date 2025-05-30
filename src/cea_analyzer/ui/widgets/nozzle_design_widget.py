@@ -8,16 +8,16 @@ Widget for designing and visualizing rocket nozzle contours.
 import numpy as np
 from typing import Dict, List, Optional, Tuple, Any
 
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QLabel, 
     QComboBox, QLineEdit, QDoubleSpinBox, QCheckBox, QPushButton,
     QFileDialog, QTabWidget, QSplitter, QMessageBox, QRadioButton,
     QButtonGroup, QGridLayout, QSpacerItem, QSizePolicy
 )
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 
 from ...propulsion.nozzle import (
     conical_nozzle, bell_nozzle, rao_optimum_nozzle, 
@@ -53,7 +53,7 @@ class NozzleDesignWidget(QWidget):
         main_layout.setContentsMargins(6, 6, 6, 6)
         
         # Create a splitter for the main panels
-        self.splitter = QSplitter(Qt.Vertical)
+        self.splitter = QSplitter(Qt.Orientation.Vertical)
         
         # Top panel: Design controls and options
         top_panel = QWidget()
@@ -227,7 +227,7 @@ class NozzleDesignWidget(QWidget):
         
         # Text display for performance
         self.performance_text = QLabel("No nozzle design available.")
-        self.performance_text.setAlignment(Qt.AlignCenter)
+        self.performance_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.performance_text.setWordWrap(True)
         self.performance_text.setStyleSheet("font-family: monospace;")
         

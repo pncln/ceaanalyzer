@@ -9,17 +9,17 @@ import numpy as np
 import pandas as pd
 from typing import Dict, List, Optional, Any, Tuple, Callable
 
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QLabel, 
     QComboBox, QDoubleSpinBox, QCheckBox, QPushButton,
     QRadioButton, QButtonGroup, QGridLayout, QFormLayout,
     QTabWidget, QMessageBox, QSplitter, QSpinBox, QProgressBar
 )
-from PyQt5.QtCore import Qt, pyqtSignal, QThread, pyqtSlot
+from PyQt6.QtCore import Qt, pyqtSignal, QThread, pyqtSlot
 
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 
 # Import optimization utilities
 from ...analysis.optimization import OptimizationMethod, optimize_parameter
@@ -113,7 +113,7 @@ class OptimizationWidget(QWidget):
         main_layout.setContentsMargins(6, 6, 6, 6)
         
         # Create a splitter for the main panels
-        self.splitter = QSplitter(Qt.Vertical)
+        self.splitter = QSplitter(Qt.Orientation.Vertical)
         
         # Top panel: Optimization controls
         top_panel = QWidget()
@@ -292,7 +292,7 @@ class OptimizationWidget(QWidget):
         results_layout = QVBoxLayout(results_tab)
         
         self.results_label = QLabel("No optimization results available.")
-        self.results_label.setAlignment(Qt.AlignCenter)
+        self.results_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.results_label.setWordWrap(True)
         self.results_label.setStyleSheet("font-family: monospace;")
         
@@ -420,6 +420,12 @@ class OptimizationWidget(QWidget):
             self.max_iter_spin.setEnabled(True)
             self.max_iter_spin.setToolTip("Maximum number of iterations")
             
+    def set_data(self, df: pd.DataFrame):
+        """Set the dataframe for optimization (compatible with MainWindow interface)."""
+        # Convert DataFrame to the format expected by set_cea_data
+        cea_data = {"data": df}
+        self.set_cea_data(cea_data)
+    
     def set_cea_data(self, cea_data: Dict[str, Any]):
         """Set the CEA data for optimization."""
         if cea_data is None:

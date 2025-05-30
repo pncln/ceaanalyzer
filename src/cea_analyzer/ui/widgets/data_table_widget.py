@@ -8,11 +8,11 @@ Widget for displaying and interacting with tabular CEA data.
 import pandas as pd
 from typing import Dict, List, Optional
 
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QWidget, QTableView, QVBoxLayout, QHBoxLayout, QLabel, 
     QComboBox, QLineEdit, QPushButton, QGroupBox, QFormLayout
 )
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 
 from ...core.models import PandasModel
 
@@ -81,7 +81,7 @@ class DataTableWidget(QWidget):
         self.table_view = QTableView()
         self.table_view.setSortingEnabled(True)
         self.table_view.setAlternatingRowColors(True)
-        self.table_view.setSelectionBehavior(QTableView.SelectRows)
+        self.table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         
         # Info label
         self.info_label = QLabel("No data loaded")

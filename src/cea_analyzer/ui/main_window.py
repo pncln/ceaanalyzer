@@ -14,13 +14,15 @@ from typing import Dict, List, Optional, Union, Any
 
 import numpy as np
 import pandas as pd
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QMainWindow, QApplication, QTabWidget, QWidget, QVBoxLayout, QHBoxLayout,
-    QSplitter, QToolBar, QAction, QStatusBar, QProgressBar, QFileDialog,
+    QSplitter, QToolBar, QStatusBar, QProgressBar, QFileDialog,
     QMessageBox, QLabel, QComboBox, QDockWidget, QTableView, QMenu
 )
-from PyQt5.QtCore import Qt, QSize, QSettings, QUrl, pyqtSignal, QThread
-from PyQt5.QtGui import QIcon, QDesktopServices, QPixmap, QFont
+from PyQt6.QtCore import Qt, QSize, QSettings, pyqtSignal, QThread
+from PyQt6.QtGui import QIcon, QPixmap, QFont, QAction
+from PyQt6.QtCore import QUrl
+from PyQt6.QtGui import QDesktopServices
 
 from ..core.config import CONFIG, CONFIG_PATH
 from ..core.logger import get_logger
@@ -186,6 +188,7 @@ class MainWindow(QMainWindow):
         """Create the application toolbars with modern icons."""
         # Main toolbar
         self.main_toolbar = QToolBar("Main", self)
+        self.main_toolbar.setObjectName("main_toolbar")
         self.main_toolbar.setMovable(False)
         self.main_toolbar.setIconSize(QSize(24, 24))
         self.main_toolbar.addAction(self.open_action)
@@ -214,7 +217,7 @@ class MainWindow(QMainWindow):
     def _create_central_widget(self):
         """Create the central widget with tabbed interface."""
         self.central_tabs = QTabWidget()
-        self.central_tabs.setTabPosition(QTabWidget.North)
+        self.central_tabs.setTabPosition(QTabWidget.TabPosition.North)
         self.central_tabs.setMovable(True)
         self.central_tabs.setDocumentMode(True)
         
@@ -240,21 +243,23 @@ class MainWindow(QMainWindow):
         """Create dockable widgets for filters and properties."""
         # Filter dock widget
         self.filter_dock = QDockWidget("Filters", self)
-        self.filter_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+        self.filter_dock.setObjectName("filter_dock")
+        self.filter_dock.setAllowedAreas(Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea)
         
         # Create filter widget (will be implemented in widgets package)
         filter_widget = QWidget()
         self.filter_dock.setWidget(filter_widget)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.filter_dock)
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.filter_dock)
         
         # Properties dock widget
         self.properties_dock = QDockWidget("Properties", self)
-        self.properties_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+        self.properties_dock.setObjectName("properties_dock")
+        self.properties_dock.setAllowedAreas(Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea)
         
         # Create properties widget (will be implemented in widgets package)
         properties_widget = QWidget()
         self.properties_dock.setWidget(properties_widget)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.properties_dock)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.properties_dock)
         
     def _connect_signals(self):
         """Connect UI signals to slots."""
@@ -451,12 +456,12 @@ class MainWindow(QMainWindow):
     def open_settings(self):
         """Open settings dialog."""
         dialog = SettingsDialog(self)
-        dialog.exec_()
+        dialog.exec()
         
     def show_about(self):
         """Show about dialog."""
         dialog = AboutDialog(self)
-        dialog.exec_()
+        dialog.exec()
         
     def open_help(self):
         """Open user manual."""

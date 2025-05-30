@@ -9,14 +9,17 @@ import pandas as pd
 import numpy as np
 from typing import Dict, List, Optional, Any
 
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, 
     QComboBox, QLabel, QPushButton, QGroupBox, QCheckBox
 )
-from PyQt5.QtCore import Qt
+from PyQt6.QtCore import Qt
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+import matplotlib
+# Set the backend to qtagg which works with PyQt6
+matplotlib.use('qtagg')
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 
 from ...utils.plots import create_graphs, create_optimization_plot
 
@@ -83,7 +86,7 @@ class PlottingWidget(QWidget):
         
         # Tab widget for different plots
         self.plot_tabs = QTabWidget()
-        self.plot_tabs.setTabPosition(QTabWidget.South)
+        self.plot_tabs.setTabPosition(QTabWidget.TabPosition.South)
         
         # Create standard plot tabs
         standard_plot_names = ["Isp", "Temperature", "Pressure", "Enthalpy", "Area Ratio", "Optimization"]
@@ -199,8 +202,38 @@ class PlottingWidget(QWidget):
                 self.figures[name].tight_layout()
                 self.canvases[name].draw()
         
-        # Create optimization plot
+        # Create optimization plot (3D surface)
         opt_fig = create_optimization_plot(self.df)
+        
+        # Store the mesh data for later recreation of the plot
+        # Extract data from the first axis which contains the 3D plot
+        opt_axes = opt_fig.get_axes()
+        if opt_axes and opt_axes[0].collections:
+            # Get the original mesh data from the figure's axes
+            if hasattr(opt_axes[0], '_current_surface'):
+                surface = opt_axes[0]._current_surface
+                if surface:
+                    self.opt_data = (surface._x, surface._y, surface._z)
+            # Alternative approach if the above doesn't work
+            if not hasattr(self, 'opt_data') or self.opt_data is None:
+                # Try to recreate the data from the original DataFrame
+                if not self.df.empty and "O/F" in self.df.columns and "Pc (bar)" in self.df.columns:
+                    unique_ofs = sorted(self.df["O/F"].unique())
+                    unique_pcs = sorted(self.df["Pc (bar)"].unique())
+                    
+                    if len(unique_ofs) >= 2 and len(unique_pcs) >= 2:
+                        OF_mesh, PC_mesh = np.meshgrid(unique_ofs, unique_pcs)
+                        Z_mesh = np.zeros_like(OF_mesh)
+                        
+                        # Fill in Z values from data (assuming Isp as default target)
+                        target_col = "Isp (s)"
+                        for i, pc in enumerate(unique_pcs):
+                            for j, of in enumerate(unique_ofs):
+                                matching = self.df[(self.df["Pc (bar)"] == pc) & (self.df["O/F"] == of)]
+                                if not matching.empty:
+                                    Z_mesh[i, j] = matching[target_col].values[0]
+                        
+                        self.opt_data = (OF_mesh, PC_mesh, Z_mesh)
         
         # Update optimization plot
         self.figures["Optimization"].clear()
@@ -210,11 +243,15 @@ class PlottingWidget(QWidget):
         if new_axes:
             new_ax = self.figures["Optimization"].add_subplot(111, projection='3d')
             
-            # Copy surface plot if it exists
-            for collection in new_axes[0].collections:
-                # This is a simplified approach - 3D plots are complex
-                # and may require more detailed copying logic
-                new_ax.add_collection3d(collection)
+            # Create a new surface plot instead of copying collections
+            # We need to recreate the plot data instead of reusing collections
+            # because matplotlib doesn't allow reusing artists across figures
+            
+            # Get the data from create_optimization_plot output
+            if hasattr(self, 'opt_data') and self.opt_data is not None:
+                X, Y, Z = self.opt_data
+                # Recreate the surface plot
+                new_ax.plot_surface(X, Y, Z, cmap='viridis', alpha=0.8)
             
             # Set axis labels and title
             new_ax.set_title(new_axes[0].get_title())
@@ -254,7 +291,7 @@ class PlottingWidget(QWidget):
         
     def _export_plot(self):
         """Export the current plot to a file."""
-        from PyQt5.QtWidgets import QFileDialog
+        from PyQt6.QtWidgets import QFileDialog
         
         # Get current figure
         current_tab = self.plot_tabs.currentIndex()

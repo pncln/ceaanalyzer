@@ -8,7 +8,7 @@ compatible with Qt's model/view architecture.
 """
 
 from typing import Any, Optional, Union
-from PyQt5.QtCore import QAbstractTableModel, Qt, QModelIndex
+from PyQt6.QtCore import QAbstractTableModel, Qt, QModelIndex
 import pandas as pd
 import numpy as np
 
@@ -75,7 +75,7 @@ class PandasModel(QAbstractTableModel):
         return 0
 
     def headerData(self, section: int, orientation: Qt.Orientation, 
-                  role: int = Qt.DisplayRole) -> Optional[str]:
+                  role: int = Qt.ItemDataRole.DisplayRole) -> Optional[str]:
         """
         Return header data for the specified role and section.
         
@@ -93,14 +93,14 @@ class PandasModel(QAbstractTableModel):
         Optional[str]
             Header data for the specified role and section
         """
-        if role == Qt.DisplayRole:
-            if orientation == Qt.Horizontal and section < len(self._df.columns):
+        if role == Qt.ItemDataRole.DisplayRole:
+            if orientation == Qt.Orientation.Horizontal and section < len(self._df.columns):
                 return str(self._df.columns[section])
-            elif orientation == Qt.Vertical and section < len(self._df):
+            elif orientation == Qt.Orientation.Vertical and section < len(self._df):
                 return str(section)
         return None
 
-    def data(self, index: QModelIndex, role: int = Qt.DisplayRole) -> Optional[str]:
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> Optional[str]:
         """
         Return data for the specified index and role.
         
@@ -125,7 +125,7 @@ class PandasModel(QAbstractTableModel):
         if row < 0 or row >= len(self._df) or col < 0 or col >= len(self._df.columns):
             return None
             
-        if role == Qt.DisplayRole or role == Qt.EditRole:
+        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             value = self._df.iat[row, col]
             
             # Format based on data type
@@ -136,16 +136,16 @@ class PandasModel(QAbstractTableModel):
             else:
                 return str(value)
                 
-        elif role == Qt.TextAlignmentRole:
+        elif role == Qt.ItemDataRole.TextAlignmentRole:
             # Right-align numeric columns
             col_type = self._dtypes.iloc[col]
             if np.issubdtype(col_type, np.number):
-                return int(Qt.AlignRight | Qt.AlignVCenter)
-            return int(Qt.AlignLeft | Qt.AlignVCenter)
+                return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+            return Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
             
         return None
         
-    def setData(self, index: QModelIndex, value: Any, role: int = Qt.EditRole) -> bool:
+    def setData(self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole) -> bool:
         """
         Set data for the specified index and role.
         
@@ -163,7 +163,7 @@ class PandasModel(QAbstractTableModel):
         bool
             True if successful, False otherwise
         """
-        if not index.isValid() or role != Qt.EditRole:
+        if not index.isValid() or role != Qt.ItemDataRole.EditRole:
             return False
             
         row, col = index.row(), index.column()
@@ -183,19 +183,10 @@ class PandasModel(QAbstractTableModel):
         except (ValueError, TypeError):
             return False
             
-    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
-        """
-        Return item flags for the specified index.
-        
-        Parameters
-        ----------
-        index : QModelIndex
-            Index to get flags for
+    def flags(self, index: QModelIndex) -> int:
+        """Return the item flags for the given index."""
+        if not index.isValid():
+            return Qt.ItemFlag.NoItemFlags
             
-        Returns
-        -------
-        Qt.ItemFlags
-            Item flags for the specified index
-        """
-        flags = super().flags(index)
-        return flags  # By default, items are enabled and selectable but not editable
+        # By default, items are enabled and selectable but not editable
+        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable

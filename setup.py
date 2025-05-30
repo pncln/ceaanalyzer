@@ -34,7 +34,7 @@ setuptools.setup(
         "pandas>=1.3.0",
         "matplotlib>=3.5.0",
         "scipy>=1.7.0",
-        "PyQt5>=5.15.0"
+        "PyQt6>=6.2.0"
     ],
     entry_points={
         "console_scripts": [

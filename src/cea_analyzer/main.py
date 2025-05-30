@@ -11,7 +11,7 @@ import sys
 import argparse
 from pathlib import Path
 
-from PyQt5.QtWidgets import QApplication, QMessageBox
+from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from .app import CEAAnalyzerApp
 from . import __version__
@@ -69,7 +69,7 @@ def main():
             if file_path.exists():
                 logger.info(f"Opening file from command line: {file_path}")
                 # Use QTimer to load the file after the main window is shown
-                from PyQt5.QtCore import QTimer
+                from PyQt6.QtCore import QTimer
                 QTimer.singleShot(500, lambda: analyzer_app.main_window.open_file(str(file_path)))
             else:
                 logger.warning(f"File not found: {file_path}")

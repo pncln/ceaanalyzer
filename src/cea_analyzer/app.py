@@ -7,16 +7,17 @@ Main application entry point for the modern CEA Analyzer GUI.
 
 import sys
 import os
+import time
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QSplashScreen, QMessageBox, 
     QFileDialog, QDialog, QProgressDialog
 )
-from PyQt5.QtCore import Qt, QSettings, QTimer
-from PyQt5.QtGui import QPixmap, QIcon
+from PyQt6.QtCore import Qt, QSettings, QTimer
+from PyQt6.QtGui import QPixmap, QIcon, QPainter, QColor, QFont, QLinearGradient
 
 from .ui.main_window import MainWindow
 from .ui.widgets.data_table_widget import DataTableWidget
@@ -51,13 +52,20 @@ class CEAAnalyzerApp:
         # Load and set app icon
         self._set_application_icon()
         
-        # Show splash screen
+        # Show splash screen - This needs to be shown before any windows
         self._show_splash_screen()
+        
+        # Force application to process events to make splash visible
+        self.app.processEvents()
+        
+        # Add delay to make the splash screen visible longer
+        # This is a synchronous delay to ensure the splash screen stays visible
+        time.sleep(1.0)  # Show splash for at least 1 second
         
         # Load settings
         self.settings = QSettings()
         
-        # Create main window
+        # Create main window but don't show it yet
         self.main_window = MainWindow()
         
         # Initialize UI
@@ -66,8 +74,9 @@ class CEAAnalyzerApp:
         # Connect signals and slots
         self._connect_signals()
         
-        # Hide splash and show main window
-        QTimer.singleShot(1500, self._finish_loading)
+        # Use a longer timer for finishing loading
+        # This ensures the splash is visible for a reasonable time
+        QTimer.singleShot(2000, self._finish_loading)
         
     def _set_application_icon(self):
         """Set the application icon."""
@@ -78,46 +87,80 @@ class CEAAnalyzerApp:
         
     def _show_splash_screen(self):
         """Show the application splash screen."""
-        # Try to load splash image from resources
-        splash_path = os.path.join(os.path.dirname(__file__), "resources", "splash.png")
-        if os.path.exists(splash_path):
-            pixmap = QPixmap(splash_path)
-        else:
-            # Create a default splash if image not found
-            from PyQt5.QtGui import QPixmap, QPainter, QColor, QFont
-            pixmap = QPixmap(600, 400)
-            pixmap.fill(QColor(0, 20, 40))
-            painter = QPainter(pixmap)
-            painter.setFont(QFont("Arial", 40))
-            painter.setPen(QColor(255, 255, 255))
-            painter.drawText(pixmap.rect(), Qt.AlignCenter, "CEA Analyzer")
-            painter.setFont(QFont("Arial", 20))
-            painter.drawText(pixmap.rect().adjusted(0, 80, 0, 0), Qt.AlignCenter, "Modern Rocket Design Tools")
-            painter.end()
+        # Create a pixmap for the splash screen
+        pixmap = QPixmap(600, 400)
+        pixmap.fill(QColor(0, 30, 60))  # Dark blue background
+        
+        # Paint on the pixmap
+        painter = QPainter(pixmap)
+        
+        # Set a gradient background
+        gradient = QLinearGradient(0, 0, 0, 400)
+        gradient.setColorAt(0, QColor(0, 40, 80))   # Dark blue at top
+        gradient.setColorAt(1, QColor(0, 10, 30))   # Darker blue at bottom
+        painter.fillRect(pixmap.rect(), gradient)
+        
+        # Draw the application name
+        font = QFont("Arial", 40)
+        font.setWeight(QFont.Weight.Bold)
+        painter.setFont(font)
+        painter.setPen(QColor(255, 255, 255))  # White color
+        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "CEA Analyzer")
+        
+        # Draw the subtitle
+        painter.setFont(QFont("Arial", 20))
+        painter.setPen(QColor(200, 200, 255))  # Light blue color
+        painter.drawText(pixmap.rect().adjusted(0, 80, 0, 0), 
+                         Qt.AlignmentFlag.AlignCenter, "Modern Rocket Design Tools")
+        
+        # Draw the version
+        try:
+            from cea_analyzer import __version__
+        except ImportError:
+            __version__ = "2.0.0"
             
+        painter.setFont(QFont("Arial", 12))
+        painter.setPen(QColor(180, 180, 180))
+        painter.drawText(pixmap.rect().adjusted(0, 0, -20, -20), 
+                         Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignBottom, 
+                         f"Version {__version__}")
+        
+        # End painting
+        painter.end()
+        
+        # Create splash screen
         self.splash = QSplashScreen(pixmap)
+        
+        # Show the splash screen
         self.splash.show()
+        
+        # Display a message
+        self.splash.showMessage("Loading CEA Analyzer...", 
+                               Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter, 
+                               Qt.GlobalColor.white)
+        
+        # Force processing of events to make splash visible
         self.app.processEvents()
+        
+        # Make sure it stays visible for a bit
+        time.sleep(1.0)  # Force the splash to display for at least 1 second
         
     def _init_ui(self):
         """Initialize the user interface."""
-        # Create widgets
-        self.data_table_widget = DataTableWidget()
-        self.plotting_widget = PlottingWidget()
-        self.nozzle_design_widget = NozzleDesignWidget()
-        self.motor_design_widget = MotorDesignWidget()
-        self.optimization_widget = OptimizationWidget()
+        # The MainWindow class already creates all the necessary widgets internally
+        # and organizes them in a tabbed interface. We don't need to manually create and add them.
         
-        # Add widgets to main window
-        self.main_window.add_central_widget("Data View", self.data_table_widget)
-        self.main_window.add_central_widget("Plotting", self.plotting_widget)
-        self.main_window.add_central_widget("Nozzle Design", self.nozzle_design_widget)
-        self.main_window.add_central_widget("Motor Design", self.motor_design_widget)
-        self.main_window.add_central_widget("Optimization", self.optimization_widget)
+        # We just need to initialize our main window and let it handle the UI setup
+        # The main window will internally create instances of:
+        # - DataTableWidget
+        # - PlottingWidget
+        # - NozzleDesignWidget
+        # - MotorDesignWidget
+        # - OptimizationWidget
+        # - SummaryWidget
         
-        # Connect main window signals
-        self.main_window.file_loaded.connect(self._handle_file_loaded)
-        self.main_window.cea_data_updated.connect(self._update_widgets_with_cea_data)
+        # MainWindow class already handles these signals internally
+        # No need to connect them here
         
         # Set window title
         self.main_window.setWindowTitle("CEA Analyzer - Modern Rocket Design Tools")
@@ -137,18 +180,8 @@ class CEAAnalyzerApp:
             
     def _connect_signals(self):
         """Connect signals and slots between widgets."""
-        # Connect nozzle design widget to motor design widget
-        self.nozzle_design_widget.nozzle_designed.connect(self.motor_design_widget.update_nozzle)
-        
-        # Connect data table widget to plotting widget
-        self.data_table_widget.data_selected.connect(self.plotting_widget.plot_data)
-        
-        # Connect CEA data updated signal from main window
-        self.main_window.cea_data_updated.connect(self.data_table_widget.set_cea_data)
-        self.main_window.cea_data_updated.connect(self.plotting_widget.set_cea_data)
-        self.main_window.cea_data_updated.connect(self.nozzle_design_widget.set_cea_data)
-        self.main_window.cea_data_updated.connect(self.motor_design_widget.set_cea_data)
-        self.main_window.cea_data_updated.connect(self.optimization_widget.set_cea_data)
+        # The MainWindow class already connects most widget signals internally
+        # We only need to connect application exit signals
         
         # Connect application exit
         self.app.aboutToQuit.connect(self._save_settings)
@@ -157,7 +190,7 @@ class CEAAnalyzerApp:
         """Finish the loading process and show the main window."""
         self.splash.finish(self.main_window)
         self.main_window.show()
-        self.main_window.status_message("Ready")
+        self.main_window.statusBar().showMessage("Ready")
         
     def _save_settings(self):
         """Save application settings."""
@@ -166,37 +199,9 @@ class CEAAnalyzerApp:
         
     def _handle_file_loaded(self, file_path):
         """Handle a file being loaded."""
-        try:
-            # Extract file extension
-            ext = Path(file_path).suffix.lower()
-            
-            if ext == '.csv':
-                # Load CSV file
-                df = pd.read_csv(file_path)
-                
-                # Compute system parameters
-                cea_data = compute_system(df)
-                
-                # Update main window with CEA data
-                self.main_window.set_cea_data(cea_data)
-                
-                # Update status
-                self.main_window.status_message(f"Loaded and processed {file_path}")
-                
-            else:
-                QMessageBox.warning(
-                    self.main_window,
-                    "Unsupported File Type",
-                    f"The file type '{ext}' is not supported. Please load a CSV file."
-                )
-                
-        except Exception as e:
-            QMessageBox.critical(
-                self.main_window,
-                "Error Loading File",
-                f"Error loading file: {str(e)}"
-            )
-            self.logger.error(f"Error loading file {file_path}: {str(e)}")
+        # This method is now handled directly by the MainWindow class
+        # and is no longer needed in this class
+        pass
             
     def _update_widgets_with_cea_data(self, cea_data):
         """Update all widgets with CEA data."""
@@ -205,7 +210,7 @@ class CEAAnalyzerApp:
         
     def run(self):
         """Run the application."""
-        return self.app.exec_()
+        return self.app.exec()
 
 
 def main():
