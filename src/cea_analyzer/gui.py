@@ -21,6 +21,7 @@ from .analysis import compute_system
 from .utils.export import export_csv, export_excel, export_pdf
 from .core.config import CONFIG, CONFIG_PATH
 from .propulsion import nozzle
+from .ui.widgets.grain_visualization_widget import GrainVisualizationWidget
 # MOC import removed
 
 class MainWindow(QMainWindow):
@@ -116,6 +117,17 @@ class MainWindow(QMainWindow):
         self.nozzle_layout.addWidget(self.nozzle_text)
         
         self.tabs.addTab(self.nozzle_widget, "Nozzle Design")
+        
+        # ─── Grain Design Tab ───
+        self.grain_design_widget = GrainVisualizationWidget()
+        grain_tab_index = self.tabs.addTab(self.grain_design_widget, "Grain Design")
+        
+        # Ensure the grain design tab is visible and properly initialized
+        self.grain_design_widget.setVisible(True)
+        
+        # Switch to the grain design tab to ensure it's initialized properly
+        # Comment out the next line if you want to start on a different tab
+        self.tabs.setCurrentIndex(grain_tab_index)
 
         # MOC tab has been removed
 
@@ -191,6 +203,7 @@ class MainWindow(QMainWindow):
         # MOC functionality removed
         self.update_recommendations()
         self.update_nozzle_design()
+        # Grain design tab is self-contained and doesn't need explicit updating
 
     def update_table(self):
         self.tbl.setModel(PandasModel(self.df))

@@ -317,3 +317,18 @@ class SummaryWidget(QWidget):
         
         # Update the nozzle table
         self._update_nozzle_table()
+        
+    def update_motor(self, motor_design: Any):
+        """Update the motor design data in the summary."""
+        if motor_design is None:
+            return
+            
+        # Store the motor design data in the cea_data dictionary
+        if self.cea_data is None:
+            self.cea_data = {}
+            
+        self.cea_data["motor"] = motor_design
+        
+        # If there's a specific method to update motor data in the UI, call it here
+        # For now, we'll just update the performance table which might contain some motor stats
+        self._update_performance_table()

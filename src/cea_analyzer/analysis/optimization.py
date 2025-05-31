@@ -149,6 +149,148 @@ def _evaluate_objective(
     # Create a copy of the CEA data to avoid modifying the original
     data = cea_data.copy()
     
+    # Initialize default values
+    motor_data = {
+        'expansion_ratio': 10.0,
+        'chamber_pressure': 5000.0,  # kPa
+        'mixture_ratio': 2.1,
+        'throat_diameter': 0.025,  # m
+        'nozzle_length': 0.15,  # m
+        'grain_length': 0.2,  # m
+        'grain_outer_diameter': 0.08,  # m
+        'grain_inner_diameter': 0.03,  # m
+    }
+    
+    # Update the parameter being optimized
+    if parameter_name == 'expansion_ratio':
+        motor_data['expansion_ratio'] = parameter_value
+    elif parameter_name == 'chamber_pressure':
+        motor_data['chamber_pressure'] = parameter_value
+    elif parameter_name == 'mixture_ratio':
+        motor_data['mixture_ratio'] = parameter_value
+    elif parameter_name == 'throat_diameter':
+        motor_data['throat_diameter'] = parameter_value
+    elif parameter_name == 'nozzle_length':
+        motor_data['nozzle_length'] = parameter_value
+    
+    # Calculate derived properties
+    try:
+        # Extract CEA performance data at the specified mixture ratio and chamber pressure
+        if 'data' in cea_data and not cea_data['data'].empty:
+            df = cea_data['data']
+            
+            # Find closest matching data point
+            if 'O/F' in df.columns and 'Pc (bar)' in df.columns:
+                # Convert kPa to bar for chamber pressure
+                chamber_pressure_bar = motor_data['chamber_pressure'] / 100.0
+                
+                # Find closest O/F ratio
+                o_f_values = df['O/F'].unique()
+                closest_o_f = min(o_f_values, key=lambda x: abs(x - motor_data['mixture_ratio']))
+                
+                # Find closest chamber pressure
+                pc_values = df['Pc (bar)'].unique()
+                closest_pc = min(pc_values, key=lambda x: abs(x - chamber_pressure_bar))
+                
+                # Filter dataframe
+                filtered_df = df[(df['O/F'] == closest_o_f) & (df['Pc (bar)'] == closest_pc)]
+                
+                if not filtered_df.empty:
+                    # Get ISP value
+                    motor_data['isp'] = filtered_df['Isp (s)'].values[0] if 'Isp (s)' in filtered_df.columns else 250.0
+                    
+                    # Get other performance values if available
+                    if 'c* (m/s)' in filtered_df.columns:
+                        motor_data['c_star'] = filtered_df['c* (m/s)'].values[0]
+                    if 'T_chamber (K)' in filtered_df.columns:
+                        motor_data['chamber_temperature'] = filtered_df['T_chamber (K)'].values[0]
+                else:
+                    # Use default values if no matching data
+                    motor_data['isp'] = 250.0
+                    motor_data['c_star'] = 1500.0
+                    motor_data['chamber_temperature'] = 3000.0
+            else:
+                # Use default values if required columns not present
+                motor_data['isp'] = 250.0
+                motor_data['c_star'] = 1500.0
+                motor_data['chamber_temperature'] = 3000.0
+        else:
+            # Use default values if no data
+            motor_data['isp'] = 250.0
+            motor_data['c_star'] = 1500.0
+            motor_data['chamber_temperature'] = 3000.0
+                
+        # Calculate nozzle properties
+        throat_area = np.pi * (motor_data['throat_diameter'] / 2) ** 2
+        exit_area = throat_area * motor_data['expansion_ratio']
+        exit_diameter = 2 * np.sqrt(exit_area / np.pi)
+        motor_data['exit_diameter'] = exit_diameter
+        
+        # Calculate thrust using simplified rocket equation
+        # F = mdot * ve + (pe - pa) * Ae
+        # For simplicity, we'll use a simplified approach based on ISP
+        g0 = 9.81  # m/s^2
+        throat_area_m2 = throat_area  # m^2
+        
+        # Simplified mass flow rate calculation
+        density = 1800  # kg/m^3 (typical solid propellant density)
+        burn_rate = 0.005  # m/s (typical burn rate)
+        burn_area = np.pi * motor_data['grain_length'] * motor_data['grain_inner_diameter']  # Simplified
+        mdot = density * burn_area * burn_rate  # kg/s
+        
+        # Calculate thrust
+        motor_data['thrust'] = mdot * motor_data['isp'] * g0  # N
+        
+        # Calculate motor mass (simplified)
+        case_density = 2700  # kg/m^3 (aluminum)
+        case_thickness = 0.003  # m
+        case_outer_diameter = motor_data['grain_outer_diameter'] + 2 * case_thickness
+        case_volume = np.pi * (case_outer_diameter**2 - motor_data['grain_outer_diameter']**2) / 4 * motor_data['grain_length']
+        case_mass = case_density * case_volume
+        
+        # Propellant volume and mass
+        grain_volume = np.pi * (motor_data['grain_outer_diameter']**2 - motor_data['grain_inner_diameter']**2) / 4 * motor_data['grain_length']
+        propellant_mass = density * grain_volume
+        
+        # Nozzle mass (simplified)
+        nozzle_mass = 0.5  # kg
+        
+        # Total motor mass
+        motor_data['motor_mass'] = case_mass + propellant_mass + nozzle_mass
+        
+        # Calculate thrust-to-weight ratio
+        motor_data['thrust_to_weight'] = motor_data['thrust'] / (motor_data['motor_mass'] * g0)
+        
+        # Calculate total motor length
+        motor_data['total_length'] = motor_data['grain_length'] + motor_data['nozzle_length']
+        
+        # Check constraints
+        for constraint_name, constraint_value in constraints.items():
+            if constraint_name == 'max_length' and motor_data['total_length'] > constraint_value:
+                return float('-inf') if objective_name in ['isp', 'thrust', 'thrust_to_weight'] else float('inf')
+            elif constraint_name == 'max_mass' and motor_data['motor_mass'] > constraint_value:
+                return float('-inf') if objective_name in ['isp', 'thrust', 'thrust_to_weight'] else float('inf')
+            elif constraint_name == 'min_isp' and motor_data['isp'] < constraint_value:
+                return float('-inf') if objective_name in ['isp', 'thrust', 'thrust_to_weight'] else float('inf')
+        
+        # Return the objective value based on what we're optimizing
+        if objective_name == 'isp':
+            return motor_data['isp']
+        elif objective_name == 'thrust':
+            return motor_data['thrust']
+        elif objective_name == 'mass':
+            return -motor_data['motor_mass']  # Negative because we want to minimize mass
+        elif objective_name == 'thrust_to_weight':
+            return motor_data['thrust_to_weight']
+        elif objective_name == 'length':
+            return -motor_data['total_length']  # Negative because we want to minimize length
+        else:
+            return motor_data['isp']  # Default to ISP if objective is not recognized
+            
+    except Exception as e:
+        logger.error(f"Error evaluating objective: {str(e)}")
+        return float('-inf') if objective_name in ['isp', 'thrust', 'thrust_to_weight'] else float('inf')
+    
     # Update the parameter value in the CEA data
     if parameter_name == "expansion_ratio":
         data['area_ratio'] = parameter_value

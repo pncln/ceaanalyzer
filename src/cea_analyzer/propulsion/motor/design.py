@@ -191,8 +191,13 @@ class MotorDesign:
                 # Skip first iteration which already has initial values
                 
                 # Get current burn area and burn rate
-                web_distance = np.sum([mass_flow[j] * time_step / (self.grain.propellant.density * self.grain.geometry.burn_area(0)) 
-                                      for j in range(i)])
+                # Add safety check to prevent division by zero
+                initial_burn_area = self.grain.geometry.burn_area(0)
+                if initial_burn_area <= 1e-10:  # Small threshold to avoid division by zero
+                    initial_burn_area = 1e-10  # Use a small positive value instead of zero
+                    
+                web_distance = np.sum([mass_flow[j] * time_step / (self.grain.propellant.density * initial_burn_area) 
+                                      for j in range(i) if mass_flow[j] > 0])  # Skip zero mass flow
                 burn_area = self.grain.geometry.burn_area(web_distance)
                 
                 # If completely burned, stop simulation
@@ -229,7 +234,13 @@ class MotorDesign:
                 
                 # Iterate to find pressure that balances mass flow
                 # Simplified approach for now:
-                p_new = (burn_mass_flow * c_star) / a_throat
+                # Add safety check to prevent division by zero
+                if a_throat <= 1e-10:  # Small threshold to avoid division by zero
+                    a_throat_safe = 1e-10  # Use a small positive value
+                else:
+                    a_throat_safe = a_throat
+                    
+                p_new = (burn_mass_flow * c_star) / a_throat_safe
                 pressure[i] = p_new / 1e6  # Convert to MPa
                 
                 # Calculate thrust using nozzle thrust equation
@@ -255,7 +266,11 @@ class MotorDesign:
                 # Update Isp
                 isp[i] = thrust[i] / (mass_flow[i] * 9.81)  # s
         
-        # Store results
+        # Store results with safety checks for empty arrays and potential numerical issues
+        # Check if arrays are empty or contain only zeros
+        non_zero_thrust = thrust[thrust > 0]
+        non_zero_isp = isp[isp > 0]
+        
         self._performance = {
             'time': time_points,
             'pressure': pressure,
@@ -263,11 +278,11 @@ class MotorDesign:
             'isp': isp,
             'mass_flow': mass_flow,
             'mass_remaining': mass_remaining,
-            'total_impulse': np.trapz(thrust, time_points),
-            'average_thrust': np.mean(thrust[thrust > 0]),
-            'max_thrust': np.max(thrust),
-            'burn_time': time_points[-1],
-            'specific_impulse': np.mean(isp[isp > 0]),
+            'total_impulse': np.trapz(thrust, time_points) if len(time_points) > 1 else 0.0,
+            'average_thrust': np.mean(non_zero_thrust) if len(non_zero_thrust) > 0 else 0.0,
+            'max_thrust': np.max(thrust) if len(thrust) > 0 else 0.0,
+            'burn_time': time_points[-1] if len(time_points) > 0 else 0.0,
+            'specific_impulse': np.mean(non_zero_isp) if len(non_zero_isp) > 0 else 0.0,
             'initial_mass': initial_mass
         }
         

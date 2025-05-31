@@ -17,7 +17,8 @@ import pandas as pd
 from PyQt6.QtWidgets import (
     QMainWindow, QApplication, QTabWidget, QWidget, QVBoxLayout, QHBoxLayout,
     QSplitter, QToolBar, QStatusBar, QProgressBar, QFileDialog,
-    QMessageBox, QLabel, QComboBox, QDockWidget, QTableView, QMenu
+    QMessageBox, QLabel, QComboBox, QDockWidget, QTableView, QMenu,
+    QScrollArea, QFrame
 )
 from PyQt6.QtCore import Qt, QSize, QSettings, pyqtSignal, QThread
 from PyQt6.QtGui import QIcon, QPixmap, QFont, QAction
@@ -229,13 +230,50 @@ class MainWindow(QMainWindow):
         self.optimization_widget = OptimizationWidget()
         self.summary_widget = SummaryWidget()
         
-        # Add tabs
-        self.central_tabs.addTab(self.data_widget, "Data")
-        self.central_tabs.addTab(self.plotting_widget, "Plots")
-        self.central_tabs.addTab(self.nozzle_widget, "Nozzle Design")
-        self.central_tabs.addTab(self.motor_widget, "Motor Design")
-        self.central_tabs.addTab(self.optimization_widget, "Optimization")
-        self.central_tabs.addTab(self.summary_widget, "Summary")
+        # Create scroll areas for each tab
+        # Data tab
+        data_scroll = QScrollArea()
+        data_scroll.setWidgetResizable(True)
+        data_scroll.setWidget(self.data_widget)
+        data_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        
+        # Plotting tab
+        plot_scroll = QScrollArea()
+        plot_scroll.setWidgetResizable(True)
+        plot_scroll.setWidget(self.plotting_widget)
+        plot_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        
+        # Nozzle design tab
+        nozzle_scroll = QScrollArea()
+        nozzle_scroll.setWidgetResizable(True)
+        nozzle_scroll.setWidget(self.nozzle_widget)
+        nozzle_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        
+        # Motor design tab
+        motor_scroll = QScrollArea()
+        motor_scroll.setWidgetResizable(True)
+        motor_scroll.setWidget(self.motor_widget)
+        motor_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        
+        # Optimization tab
+        opt_scroll = QScrollArea()
+        opt_scroll.setWidgetResizable(True)
+        opt_scroll.setWidget(self.optimization_widget)
+        opt_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        
+        # Summary tab
+        summary_scroll = QScrollArea()
+        summary_scroll.setWidgetResizable(True)
+        summary_scroll.setWidget(self.summary_widget)
+        summary_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        
+        # Add tabs with scroll areas
+        self.central_tabs.addTab(data_scroll, "Data")
+        self.central_tabs.addTab(plot_scroll, "Plots")
+        self.central_tabs.addTab(nozzle_scroll, "Nozzle Design")
+        self.central_tabs.addTab(motor_scroll, "Motor Design")
+        self.central_tabs.addTab(opt_scroll, "Optimization")
+        self.central_tabs.addTab(summary_scroll, "Summary")
         
         self.setCentralWidget(self.central_tabs)
         

@@ -11,7 +11,8 @@ from typing import Dict, List, Optional, Any
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, 
-    QComboBox, QLabel, QPushButton, QGroupBox, QCheckBox
+    QComboBox, QLabel, QPushButton, QGroupBox, QCheckBox,
+    QScrollArea, QFrame
 )
 from PyQt6.QtCore import Qt
 from matplotlib.figure import Figure
@@ -88,8 +89,17 @@ class PlottingWidget(QWidget):
         self.plot_tabs = QTabWidget()
         self.plot_tabs.setTabPosition(QTabWidget.TabPosition.South)
         
-        # Create standard plot tabs
-        standard_plot_names = ["Isp", "Temperature", "Pressure", "Enthalpy", "Area Ratio", "Optimization"]
+        # Create standard plot tabs - internal names must match keys returned by create_graphs function
+        # Dictionary mapping internal names to display names
+        plot_name_mapping = {
+            "Isp": "Isp",
+            "Temp": "Temperature",
+            "PressureRatio": "Pressure",
+            "Enthalpy": "Enthalpy",
+            "AreaRatio": "Area Ratio",
+            "Optimization": "Optimization"
+        }
+        standard_plot_names = list(plot_name_mapping.keys())
         
         for name in standard_plot_names:
             # Create figure and canvas
@@ -102,14 +112,21 @@ class PlottingWidget(QWidget):
             self.canvases[name] = canvas
             self.toolbars[name] = toolbar
             
-            # Create tab widget
-            tab_widget = QWidget()
-            tab_layout = QVBoxLayout(tab_widget)
+            # Create tab content widget
+            tab_content = QWidget()
+            tab_layout = QVBoxLayout(tab_content)
             tab_layout.addWidget(toolbar)
             tab_layout.addWidget(canvas)
             
-            # Add to tab widget
-            self.plot_tabs.addTab(tab_widget, name)
+            # Create scroll area for the tab
+            scroll_area = QScrollArea()
+            scroll_area.setWidgetResizable(True)
+            scroll_area.setWidget(tab_content)
+            scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+            
+            # Add to tab widget with display name
+            display_name = plot_name_mapping.get(name, name)
+            self.plot_tabs.addTab(scroll_area, display_name)
         
         # Add to main layout
         main_layout.addWidget(control_group)
@@ -167,6 +184,7 @@ class PlottingWidget(QWidget):
         
         # Update each plot
         for name, fig in plot_dict.items():
+            # Check if this plot has a corresponding figure in our widget
             if name in self.figures:
                 # Clear existing figure
                 self.figures[name].clear()
